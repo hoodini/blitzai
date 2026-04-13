@@ -62,7 +62,7 @@ export default function ProjectsPage() {
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
   const now = useElapsedTimers(projects);
-  const { language } = useAppStore();
+  const { language, setActiveTranscriptions } = useAppStore();
 
   useEffect(() => {
     loadProjects();
@@ -85,6 +85,7 @@ export default function ProjectsPage() {
     try {
       const data = await api.listProjects(search ? { search } : undefined);
       setProjects(data.projects);
+      setActiveTranscriptions(data.projects.filter((p) => ["processing", "downloading", "pending"].includes(p.status)).length);
     } catch (err) {
       console.warn("Failed to load projects (will retry):", err);
     } finally {

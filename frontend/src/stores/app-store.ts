@@ -15,9 +15,13 @@ interface AppState {
   language: Lang;
   setLanguage: (lang: Lang) => void;
   initFromStorage: () => void;
+  activeTranscriptions: number;
+  setActiveTranscriptions: (count: number) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  activeTranscriptions: 0,
+  setActiveTranscriptions: (count) => set({ activeTranscriptions: count }),
   sidebarOpen: true,
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
