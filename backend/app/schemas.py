@@ -29,6 +29,7 @@ class TranscribeRequest(BaseModel):
 class TranscribeURLRequest(TranscribeRequest):
     url: str
     playlist: bool = False  # If True, download entire playlist
+    playlist_end: Optional[int] = None  # Limit playlist to N items
 
 
 class TranscribeFolderRequest(TranscribeRequest):

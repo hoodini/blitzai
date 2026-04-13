@@ -143,7 +143,7 @@ async def transcribe_url(
     """Transcribe from a YouTube/Vimeo URL (single video or playlist)."""
     # Get URL info first
     try:
-        info = await get_url_info(request.url)
+        info = await get_url_info(request.url, playlist_end=request.playlist_end)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not access URL: {e}")
 
@@ -208,7 +208,7 @@ async def get_url_metadata(request: dict):
     if not url:
         raise HTTPException(status_code=400, detail="URL is required")
     try:
-        info = await get_url_info(url)
+        info = await get_url_info(url, playlist_end=request.get("playlist_end"))
         return {
             "title": info.title,
             "duration_seconds": info.duration_seconds,

@@ -61,10 +61,14 @@ def detect_platform(url: str) -> str:
 
 def is_playlist_url(url: str) -> bool:
     """Check if URL points to a playlist."""
+    if re.search(r"tiktok\.com/@[^/]+$", url):
+        return True
+    if re.search(r"youtube\.com/@[^/]+(/(shorts|videos|streams))?$", url):
+        return True
     return bool(re.search(r"(list=|/playlist/|/album/|/series/)", url))
 
 
-async def get_url_info(url: str) -> VideoInfo:
+async def get_url_info(url: str, playlist_end: int | None = None) -> VideoInfo:
     """
     Extract metadata from a URL without downloading.
     Uses yt-dlp --dump-json for fast metadata extraction.
@@ -81,6 +85,8 @@ async def get_url_info(url: str) -> VideoInfo:
     ]
     if is_playlist:
         cmd.append("--flat-playlist")
+        if playlist_end:
+            cmd += ["--playlist-end", str(playlist_end)]
     else:
         cmd.append("--no-playlist")
     cmd.append(url)
