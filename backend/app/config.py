@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     upload_dir: Path = base_dir / "uploads"
     processed_dir: Path = base_dir / "processed"
     export_dir: Path = base_dir / "exports"
+    transcriptions_dir: Path = base_dir / "transcriptions"
     db_path: Path = base_dir / "kol.db"
     allowed_scan_dir: Path = base_dir / "uploads"
 
@@ -49,7 +50,7 @@ class Settings(BaseSettings):
 
     def ensure_dirs(self):
         """Create all required directories."""
-        for d in [self.upload_dir, self.processed_dir, self.export_dir, self.allowed_scan_dir]:
+        for d in [self.upload_dir, self.processed_dir, self.export_dir, self.transcriptions_dir, self.allowed_scan_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
 

@@ -24,6 +24,7 @@ export default function URLPage() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [urlInfo, setUrlInfo] = useState<any>(null);
   const [includePlaylist, setIncludePlaylist] = useState(false);
+  const [profileLimit, setProfileLimit] = useState<number | null>(10);
 
   const fetchInfo = async () => {
     if (!url.trim()) return;
@@ -43,7 +44,11 @@ export default function URLPage() {
   const startTranscription = async () => {
     setIsTranscribing(true);
     try {
-      const result = await api.transcribeUrl(url, engine, language, includePlaylist) as any;
+      const result = await api.transcribeUrl(
+        url, engine, language,
+        isTikTokProfile ? true : includePlaylist,
+        isTikTokProfile ? (profileLimit ?? undefined) : undefined,
+      ) as any;
       // Always go to projects — transcription runs in background
       router.push("/projects");
     } catch (err: any) {
@@ -52,6 +57,10 @@ export default function URLPage() {
       setIsTranscribing(false);
     }
   };
+
+  const isTikTokProfile =
+    (urlInfo?.platform === "tiktok" && /tiktok\.com\/@[^/]+$/.test(url)) ||
+    (urlInfo?.platform === "youtube" && /youtube\.com\/@[^/]+(\/(?:shorts|videos|streams))?$/.test(url));
 
   const getPlatformIcon = (platform?: string) => {
     if (platform === "youtube") return MonitorPlay;
@@ -131,24 +140,67 @@ export default function URLPage() {
               {urlInfo.title}
             </h3>
 
-            {/* Playlist info */}
+            {/* Playlist / Profile info */}
             {urlInfo.is_playlist && (
               <div className="flex items-center justify-between p-3 rounded-xl bg-secondary">
                 <div className="flex items-center gap-2">
                   <List className="w-5 h-5 text-primary" />
                   <span className="text-sm font-medium">
-                    פלייליסט — {urlInfo.playlist_count} סרטונים
+                    {isTikTokProfile
+                      ? urlInfo.platform === "youtube" ? "ערוץ YouTube" : "פרופיל TikTok"
+                      : `פלייליסט — ${urlInfo.playlist_count} סרטונים`}
                   </span>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includePlaylist}
-                    onChange={(e) => setIncludePlaylist(e.target.checked)}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm">תמלל הכל</span>
-                </label>
+                {isTikTokProfile ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">כמה סרטונים?</span>
+                    {[5, 10, 15, 20].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setProfileLimit(n)}
+                        className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-colors ${
+                          profileLimit === n
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-background hover:bg-accent"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min={1}
+                      max={urlInfo.playlist_count}
+                      placeholder="מותאם"
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value);
+                        if (v > 0) setProfileLimit(v);
+                      }}
+                      className="w-16 px-2 py-1 rounded-lg text-sm border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary text-center"
+                      dir="ltr"
+                    />
+                    <button
+                      onClick={() => setProfileLimit(null)}
+                      className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-colors ${
+                        profileLimit === null
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background hover:bg-accent"
+                      }`}
+                    >
+                      הכל
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includePlaylist}
+                      onChange={(e) => setIncludePlaylist(e.target.checked)}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm">תמלל הכל</span>
+                  </label>
+                )}
               </div>
             )}
 
@@ -227,7 +279,9 @@ export default function URLPage() {
           ) : (
             <span className="flex items-center justify-center gap-2">
               <Mic className="w-5 h-5" />
-              {includePlaylist && urlInfo.is_playlist
+              {urlInfo.is_playlist && isTikTokProfile
+                ? (profileLimit ? `תמלל ${profileLimit} סרטונים` : `תמלל הכל`)
+                : includePlaylist && urlInfo.is_playlist
                 ? `תמלל ${urlInfo.playlist_count} סרטונים`
                 : "הורד ותמלל"}
             </span>

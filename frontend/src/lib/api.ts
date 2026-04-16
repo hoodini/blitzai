@@ -74,16 +74,16 @@ export const api = {
     return res.json();
   },
 
-  transcribeUrl: (url: string, engine: string, language: string, playlist: boolean = false) =>
+  transcribeUrl: (url: string, engine: string, language: string, playlist: boolean = false, playlistEnd?: number) =>
     request("/api/transcribe/url", {
       method: "POST",
-      body: JSON.stringify({ url, engine, language, playlist }),
+      body: JSON.stringify({ url, engine, language, playlist, playlist_end: playlistEnd }),
     }),
 
-  getUrlInfo: (url: string) =>
+  getUrlInfo: (url: string, playlistEnd?: number) =>
     request("/api/transcribe/url/info", {
       method: "POST",
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, playlist_end: playlistEnd }),
     }),
 
   transcribeFolder: (folderPath: string, engine: string, language: string) =>

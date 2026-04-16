@@ -143,12 +143,13 @@ async def transcribe_url(
     """Transcribe from a YouTube/Vimeo URL (single video or playlist)."""
     # Get URL info first
     try:
-        info = await get_url_info(request.url)
+        info = await get_url_info(request.url, playlist_end=request.playlist_end)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not access URL: {e}")
 
     if info.is_playlist and request.playlist:
         # Handle playlist — create a project for each video
+        channel_name = info.entries[0].url.split("@")[1].split("/")[0] if info.entries and "@" in info.entries[0].url else None
         project_ids = []
         for entry in info.entries:
             project = Project(
@@ -167,7 +168,7 @@ async def transcribe_url(
 
             background_tasks.add_task(
                 _download_and_transcribe,
-                project.id, entry.url, request.engine, request.language,
+                project.id, entry.url, request.engine, request.language, channel_name,
             )
 
         await db.commit()
@@ -208,7 +209,7 @@ async def get_url_metadata(request: dict):
     if not url:
         raise HTTPException(status_code=400, detail="URL is required")
     try:
-        info = await get_url_info(url)
+        info = await get_url_info(url, playlist_end=request.get("playlist_end"))
         return {
             "title": info.title,
             "duration_seconds": info.duration_seconds,
@@ -417,9 +418,10 @@ async def _run_transcription(project_id: str, file_path: Path, engine_id: str, l
                 logger.error(f"[job:{project_id[:8]}] Failed: {e}")
 
 
-async def _download_and_transcribe(project_id: str, url: str, engine_id: str, language: str):
+async def _download_and_transcribe(project_id: str, url: str, engine_id: str, language: str, channel_name: str | None = None):
     """Background task: download from URL then transcribe."""
     import logging
+    import re
     logger = logging.getLogger(__name__)
     logger.info(f"[job:{project_id[:8]}] Starting download+transcribe: {url} engine={engine_id}")
     async with async_session() as db:
@@ -443,6 +445,28 @@ async def _download_and_transcribe(project_id: str, url: str, engine_id: str, la
 
             # Transcribe
             await transcribe_file(project, result.file_path, engine_id, language, db, _notify_progress)
+
+            # Save MD file for bulk downloads
+            if channel_name:
+                from sqlalchemy import select as sa_select
+                from app.models import TranscriptVersion, Segment
+                version = (await db.execute(
+                    sa_select(TranscriptVersion)
+                    .where(TranscriptVersion.project_id == project_id)
+                    .order_by(TranscriptVersion.version_number.desc())
+                )).scalars().first()
+                if version:
+                    segments = (await db.execute(
+                        sa_select(Segment)
+                        .where(Segment.version_id == version.id)
+                        .order_by(Segment.index_num)
+                    )).scalars().all()
+                    text = "\n".join(seg.text for seg in segments)
+                    safe_title = re.sub(r'[\\/*?:"<>|]', "", project.name)[:100]
+                    out_dir = settings.transcriptions_dir / channel_name
+                    out_dir.mkdir(parents=True, exist_ok=True)
+                    (out_dir / f"{safe_title}.md").write_text(text, encoding="utf-8")
+                    logger.info(f"[job:{project_id[:8]}] Saved MD: {out_dir}/{safe_title}.md")
 
         except Exception as e:
             project.status = "error"

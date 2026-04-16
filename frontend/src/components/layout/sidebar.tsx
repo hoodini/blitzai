@@ -22,7 +22,7 @@ import {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { sidebarOpen, toggleSidebar, darkMode, toggleDarkMode, language, setLanguage } = useAppStore();
+  const { sidebarOpen, toggleSidebar, darkMode, toggleDarkMode, language, setLanguage, activeTranscriptions } = useAppStore();
 
   const isRtl = language === "he";
 
@@ -99,8 +99,17 @@ export function Sidebar() {
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
               {sidebarOpen && (
-                <span className="text-sm font-medium animate-fade-in">
+                <span className="text-sm font-medium animate-fade-in flex-1">
                   {item.label}
+                </span>
+              )}
+              {item.href === "/projects" && activeTranscriptions > 0 && (
+                <span className={`min-w-[20px] h-5 px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                  isActive
+                    ? "bg-primary-foreground text-primary"
+                    : "bg-primary text-primary-foreground"
+                }`}>
+                  {activeTranscriptions > 999 ? "999+" : activeTranscriptions}
                 </span>
               )}
             </Link>
